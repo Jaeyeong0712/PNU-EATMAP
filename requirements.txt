@@ -1,5 +1,5 @@
-pandas
-Requests
-Streamlit
-Folium
+streamlit
 streamlit-folium
+folium
+requests
+pandas
