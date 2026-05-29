@@ -21,7 +21,8 @@ st.title("🍴 부산대학교 맛집 지도")
 # 카카오 REST API KEY
 # ==========================================
 
-KAKAO_REST_API_KEY = "e80c1b2bc71b22df2dd4b41975e11537"
+# 본인의 카카오 REST API KEY 입력
+KAKAO_REST_API_KEY = "여기에_본인_API키"
 
 # 카카오 API 인증 헤더
 headers = {
@@ -34,18 +35,27 @@ headers = {
 
 def classify_category(category):
 
+    # 한식 분류
     if "한식" in category:
         return "한식"
 
+    # 중식 분류
     elif "중식" in category or "중국요리" in category:
         return "중식"
 
+    # 일식 분류
     elif "일식" in category or "초밥" in category:
         return "일식"
 
-    elif "양식" in category or "피자" in category or "패스트푸드" in category:
+    # 양식 분류
+    elif (
+        "양식" in category or
+        "피자" in category or
+        "패스트푸드" in category
+    ):
         return "양식"
 
+    # 나머지는 기타
     else:
         return "기타"
 
@@ -59,10 +69,10 @@ def search_restaurants():
     # 카카오 장소 검색 API
     url = "https://dapi.kakao.com/v2/local/search/keyword.json"
 
-    # 맛집 데이터를 저장할 리스트
+    # 맛집 저장 리스트
     restaurant_list = []
 
-    # 여러 키워드 사용
+    # 검색 키워드
     queries = [
         "맛집",
         "한식",
@@ -72,12 +82,12 @@ def search_restaurants():
         "카페"
     ]
 
-    # 여러 페이지 조회
+    # 여러 키워드 검색
     for query in queries:
 
-        for page in range(1, 6):
+        # 여러 페이지 검색
+        for page in range(1, 16):
 
-            # API 요청 파라미터
             params = {
 
                 # 검색 키워드
@@ -87,8 +97,8 @@ def search_restaurants():
                 "x": 129.0796,
                 "y": 35.2332,
 
-                # 검색 범위
-                "radius": 5000,
+                # 장전동 중심 검색 범위
+                "radius": 1500,
 
                 # 페이지당 최대 개수
                 "size": 15,
@@ -110,14 +120,13 @@ def search_restaurants():
                 params=params
             )
 
-            # API 요청 간격
+            # 서버 과부하 방지
             time.sleep(0.2)
 
-            # 응답 오류 확인
+            # 오류 발생 시
             if response.status_code != 200:
 
                 st.error("카카오 API 요청 실패")
-
                 st.write(response.text)
 
                 return pd.DataFrame()
@@ -140,14 +149,14 @@ def search_restaurants():
 
                     "전화번호": place.get('phone', ''),
 
-                    # 지도용 좌표
+                    # 지도 표시용 좌표
                     "위도": float(place.get('y', 0)),
                     "경도": float(place.get('x', 0))
                 }
 
                 restaurant_list.append(restaurant)
 
-    # DataFrame 생성
+    # 데이터프레임 생성
     df = pd.DataFrame(restaurant_list)
 
     # 중복 제거
@@ -162,7 +171,7 @@ def search_restaurants():
 df = search_restaurants()
 
 # ==========================================
-# 카테고리 라디오 버튼
+# 음식 종류 선택
 # ==========================================
 
 category_option = st.radio(
@@ -172,25 +181,51 @@ category_option = st.radio(
 )
 
 # ==========================================
-# 카테고리 필터링
+# 음식 카테고리 필터링
 # ==========================================
 
 if category_option == "전체":
+
     filtered_df = df
 
 else:
-    filtered_df = df[df["카테고리"] == category_option]
+
+    filtered_df = df[
+        df["카테고리"] == category_option
+    ]
+
+# ==========================================
+# 식당 이름 검색
+# ==========================================
+
+search_name = st.text_input(
+    "🔍 식당 이름 검색",
+    placeholder="예: 북문분식"
+)
+
+# 검색어가 있을 경우
+if search_name.strip() != "":
+
+    filtered_df = filtered_df[
+        filtered_df["가게명"].str.contains(
+            search_name,
+            case=False,
+            na=False
+        )
+    ]
 
 # ==========================================
 # CSV 저장
 # ==========================================
 
-# data 폴더 없으면 생성
+# data 폴더 생성
 if not os.path.exists("data"):
     os.makedirs("data")
 
 # CSV 저장용 데이터
-save_df = filtered_df.drop(columns=["위도", "경도"])
+save_df = filtered_df.drop(
+    columns=["위도", "경도"]
+)
 
 # CSV 저장
 save_df.to_csv(
@@ -200,27 +235,26 @@ save_df.to_csv(
 )
 
 # ==========================================
-# 맛집 데이터 출력
+# 맛집 목록 출력
 # ==========================================
 
 st.subheader("📋 부산대학교 주변 맛집 목록")
 
-# 화면 표시용 데이터
-display_df = filtered_df.drop(columns=["위도", "경도"])
+# 표 출력용 데이터
+display_df = filtered_df.drop(
+    columns=["위도", "경도"]
+)
 
+# 표 출력
 st.dataframe(display_df)
 
 # ==========================================
 # Folium 지도 생성
 # ==========================================
 
-# 부산대학교 중심 좌표
-map_center = [35.2332, 129.0796]
-
-# 지도 생성
 m = folium.Map(
-    location=map_center,
-    zoom_start=15
+    location=[35.2332, 129.0796],
+    zoom_start=16
 )
 
 # ==========================================
@@ -237,12 +271,12 @@ color_dict = {
 }
 
 # ==========================================
-# 지도 마커 추가
+# 음식점 마커 추가
 # ==========================================
 
 for idx, row in filtered_df.iterrows():
 
-    # 마커 클릭 시 표시 내용
+    # 팝업 내용
     popup_text = f"""
     <b>{row['가게명']}</b><br>
     카테고리: {row['카테고리']}<br>
