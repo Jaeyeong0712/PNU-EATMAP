@@ -22,7 +22,7 @@ st.title("🍴 부산대학교 맛집 지도")
 # ==========================================
 
 # 본인의 카카오 REST API KEY 입력
-KAKAO_REST_API_KEY = ("e80c1b2bc71b22df2dd4b41975e11537")
+KAKAO_REST_API_KEY = "본인_API키"
 
 # 카카오 API 인증 헤더
 headers = {
